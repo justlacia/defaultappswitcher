@@ -1,0 +1,124 @@
+import DefaultAppSwitcherCore
+import SwiftUI
+
+struct ResetConfirmationSheet: View {
+    @Bindable var state: AppState
+    let confirmation: PendingResetConfirmation
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var includeBrowserAndSchemes: Bool = false
+
+    private var activeItems: [AppAssociation] {
+        let source = includeBrowserAndSchemes ? confirmation.allThirdPartyItems : confirmation.items
+        return source.filter { $0.canResetToSystemDefault }
+    }
+
+    private var groupedTargets: [(target: ResetTarget, count: Int, sampleExtensions: [String])] {
+        var buckets: [String: (target: ResetTarget, exts: [String])] = [:]
+        for item in activeItems {
+            guard let target = item.recommendedDefault else { continue }
+            let key = target.bundleID.lowercased()
+            let label = item.kind == .urlScheme ? "\(item.identifier)://" : item.displayExtensionsText
+            if var existing = buckets[key] {
+                existing.exts.append(label)
+                buckets[key] = existing
+            } else {
+                buckets[key] = (target, [label])
+            }
+        }
+        return buckets.values
+            .map { ($0.target, $0.exts.count, Array($0.exts.prefix(6))) }
+            .sorted { $0.count > $1.count }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.counterclockwise.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.blue)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(confirmation.title)
+                        .font(.title3.weight(.bold))
+                    Text(confirmation.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if confirmation.includesBrowserAndSchemesToggle {
+                Toggle(
+                    "Tarayıcı (http/https/html) ve diğer URL şemalarını da Safari'ye sıfırla",
+                    isOn: $includeBrowserAndSchemes
+                )
+                .font(.callout)
+                .padding(10)
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Önizleme — Toplam \(activeItems.count) atama sıfırlanacak:")
+                    .font(.callout.weight(.semibold))
+
+                if groupedTargets.isEmpty {
+                    Text("Sıfırlanabilecek uygun bir atama bulunamadı.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(12)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 8) {
+                            ForEach(groupedTargets, id: \.target.bundleID) { group in
+                                HStack(spacing: 10) {
+                                    AppIconView(url: group.target.appURL, size: 28)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("\(group.count) uzantı → \(group.target.appName)")
+                                            .font(.callout.weight(.medium))
+                                        Text(group.sampleExtensions.joined(separator: ", "))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                }
+                                .padding(8)
+                                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 230)
+                }
+            }
+
+            HStack(spacing: 6) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .foregroundStyle(.green)
+                Text("İşlem öncesi mevcut tüm varsayılanlarınız otomatik yedeklenir; istediğiniz an Yedekler menüsünden geri alabilirsiniz.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack {
+                Spacer()
+                Button("Vazgeç") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Button("Onayla ve Sıfırla (\(activeItems.count))") {
+                    let itemsToReset = activeItems
+                    let title = confirmation.title
+                    dismiss()
+                    Task {
+                        await state.executePendingReset(items: itemsToReset, title: title)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+                .disabled(activeItems.isEmpty)
+            }
+        }
+        .padding(20)
+        .frame(width: 520)
+    }
+}
