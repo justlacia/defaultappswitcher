@@ -10,6 +10,18 @@ A native SwiftUI macOS utility that resets accidentally overridden default file 
 
 ---
 
+## Screenshots
+
+**Overview — One-Click Reset & Active Overrides (`Genel Bakış`)**
+
+![DefaultAppSwitcher Overview](assets/screenshots/overview.png)
+
+**App Detail — Default Extensions & Permissions (`Uygulama Detayı`)**
+
+![DefaultAppSwitcher App Detail](assets/screenshots/app-detail.png)
+
+---
+
 ## Download
 
 Pre-built **Universal macOS** binaries are available on **GitHub Releases**:
