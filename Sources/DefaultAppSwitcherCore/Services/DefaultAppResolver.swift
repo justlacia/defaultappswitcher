@@ -231,7 +231,7 @@ public enum DefaultAppResolver {
         extensions: [String],
         category: AssociationCategory,
         currentBundleID: String
-    ) -> (isCollision: Bool, reason: String?) {
+    ) -> (isCollision: Bool, reason: LocalizedText?) {
         let lowerApp = currentBundleID.lowercased()
         let lowerID = identifier.lowercased()
 
@@ -241,21 +241,52 @@ public enum DefaultAppResolver {
 
         if mediaPlayerBundleIDs.contains(lowerApp) {
             if lowerID == "com.microsoft.typescript" {
-                return (true, "Medya oynatıcı TypeScript kod dosyasına (.ts/.tsx) varsayılan atanmış")
+                return (
+                    true,
+                    LocalizedText(
+                        tr: "Medya oynatıcı TypeScript kod dosyasına (.ts/.tsx) varsayılan atanmış",
+                        en: "Media player is set as default for TypeScript code files (.ts/.tsx)"
+                    )
+                )
             }
             if lowerID == "com.adobe.postscript" || lowerID == "com.adobe.encapsulated-postscript" {
-                return (true, "Medya oynatıcı PostScript belgesine (.ps) varsayılan atanmış")
+                return (
+                    true,
+                    LocalizedText(
+                        tr: "Medya oynatıcı PostScript belgesine (.ps) varsayılan atanmış",
+                        en: "Media player is set as default for PostScript documents (.ps)"
+                    )
+                )
             }
             if lowerID == "io.iina.cue" || lowerID == "com.real.ram" {
-                return (true, "Metin/playlist metadata dosyası (\(extensions.map { ".\($0)" }.joined(separator: ", "))) medya oynatıcıya bağlı")
+                let extList = extensions.map { ".\($0)" }.joined(separator: ", ")
+                return (
+                    true,
+                    LocalizedText(
+                        tr: "Metin/playlist metadata dosyası (\(extList)) medya oynatıcıya bağlı",
+                        en: "Text/playlist metadata file (\(extList)) is linked to a media player"
+                    )
+                )
             }
             if category == .textCode || category == .image || category == .web || category == .archive {
-                return (true, "Medya oynatıcı medya dışı türe (\(category.displayName)) varsayılan atanmış")
+                return (
+                    true,
+                    LocalizedText(
+                        tr: "Medya oynatıcı medya dışı türe (\(category.displayName(in: .turkish))) varsayılan atanmış",
+                        en: "Media player is set as default for non-media category (\(category.displayName(in: .english)))"
+                    )
+                )
             }
         }
 
         if kind == .extensionOnly {
-            return (true, "Eski uzantı tabanlı (extension) özel atama kaydı")
+            return (
+                true,
+                LocalizedText(
+                    tr: "Eski uzantı tabanlı (extension) özel atama kaydı",
+                    en: "Legacy extension-based custom handler override"
+                )
+            )
         }
 
         return (false, nil)

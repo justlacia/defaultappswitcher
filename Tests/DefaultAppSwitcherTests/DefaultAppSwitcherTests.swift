@@ -27,6 +27,40 @@ actor MockHandlerMutator: DefaultHandlerMutating {
 
 @Suite("DefaultAppSwitcherCore Tests")
 struct DefaultAppSwitcherTests {
+    @Test("AppLanguage detects system language and resolves stored preference")
+    func testAppLanguageDetectionAndResolution() {
+        #expect(AppLanguage.detectSystemLanguage(preferredLanguages: ["tr-TR", "en-US"]) == .turkish)
+        #expect(AppLanguage.detectSystemLanguage(preferredLanguages: ["tr"]) == .turkish)
+        #expect(AppLanguage.detectSystemLanguage(preferredLanguages: ["TR-CY"]) == .turkish)
+        #expect(AppLanguage.detectSystemLanguage(preferredLanguages: ["en-US", "tr-TR"]) == .english)
+        #expect(AppLanguage.detectSystemLanguage(preferredLanguages: ["de-DE"]) == .english)
+        #expect(AppLanguage.detectSystemLanguage(preferredLanguages: []) == .english)
+
+        #expect(AppLanguage.resolveInitial(storedCode: "en", preferredLanguages: ["tr-TR"]) == .english)
+        #expect(AppLanguage.resolveInitial(storedCode: "tr", preferredLanguages: ["en-US"]) == .turkish)
+        #expect(AppLanguage.resolveInitial(storedCode: nil, preferredLanguages: ["tr-TR"]) == .turkish)
+        #expect(AppLanguage.resolveInitial(storedCode: nil, preferredLanguages: ["en-US"]) == .english)
+        #expect(AppLanguage.resolveInitial(storedCode: "invalid", preferredLanguages: ["tr-TR"]) == .turkish)
+    }
+
+    @Test("Bilingual LocalizedText translations exist for categories, TCC statuses, and errors")
+    func testBilingualModelStrings() {
+        #expect(AssociationCategory.audio.displayName(in: .turkish) == "Ses")
+        #expect(AssociationCategory.audio.displayName(in: .english) == "Audio")
+        #expect(HandlerKind.contentType.displayName(in: .turkish) == "İçerik Türü (UTI)")
+        #expect(HandlerKind.contentType.displayName(in: .english) == "Content Type (UTI)")
+        #expect(TCCAuthStatus.allowed.displayName(in: .turkish) == "İzin Verildi")
+        #expect(TCCAuthStatus.allowed.displayName(in: .english) == "Allowed")
+        #expect(TCCScope.user.displayName(in: .turkish) == "Kullanıcı")
+        #expect(TCCScope.user.displayName(in: .english) == "User")
+        #expect(BackgroundItemKind.loginItem.displayName(in: .turkish) == "Oturum Açma Öğesi")
+        #expect(BackgroundItemKind.loginItem.displayName(in: .english) == "Login Item")
+
+        let err = LaunchServicesError.noTargetApp(identifier: "public.mpeg-4")
+        #expect(err.message(in: .turkish).contains("uygun bir sistem varsayılan"))
+        #expect(err.message(in: .english).contains("No suitable system default"))
+    }
+
     @Test("HandlerPrefParser parses content types, URL schemes, extensions, and ignores bundle ver")
     func testHandlerPrefParser() {
         let sample = """
@@ -135,6 +169,8 @@ struct DefaultAppSwitcherTests {
             currentBundleID: "com.colliderli.iina"
         )
         #expect(tsCollision.isCollision == true)
+        #expect(tsCollision.reason?.text(for: .turkish).contains("TypeScript") == true)
+        #expect(tsCollision.reason?.text(for: .english).contains("TypeScript") == true)
 
         let psCategory = DefaultAppResolver.categorize(
             kind: .contentType,
@@ -152,6 +188,7 @@ struct DefaultAppSwitcherTests {
             currentBundleID: "com.colliderli.iina"
         )
         #expect(psCollision.isCollision == true)
+        #expect(psCollision.reason?.text(for: .english).contains("PostScript") == true)
 
         let httpsTarget = DefaultAppResolver.recommendedSystemDefault(
             for: .urlScheme,
@@ -163,7 +200,6 @@ struct DefaultAppSwitcherTests {
         )
         #expect(httpsTarget?.bundleID.lowercased() == DefaultAppResolver.BundleID.safari.lowercased())
 
-        // Apple apps on extensionOnly must NOT be flagged as collisions
         let appleExtCollision = DefaultAppResolver.detectCollision(
             kind: .extensionOnly,
             identifier: "aa3",
@@ -173,7 +209,6 @@ struct DefaultAppSwitcherTests {
         )
         #expect(appleExtCollision.isCollision == false)
 
-        // Private app plugin UTIs must not be redirected to Archive Utility or other system apps
         let privatePluginTarget = DefaultAppResolver.recommendedSystemDefault(
             for: .contentType,
             identifier: "io.iina.iinaplgz",
@@ -194,7 +229,6 @@ struct DefaultAppSwitcherTests {
         )
         #expect(privatePluginTarget2 == nil)
 
-        // Standard Apple default recognition
         #expect(DefaultAppResolver.isStandardAppleDefault(
             bundleID: DefaultAppResolver.BundleID.quickTime,
             for: .contentType,
@@ -319,7 +353,7 @@ struct DefaultAppSwitcherTests {
             isExplicitOverride: true,
             overrideModDate: nil,
             isSuspiciousCollision: true,
-            collisionReason: "Eski uzantı tabanlı kayıt",
+            collisionReason: LocalizedText(tr: "Eski uzantı tabanlı kayıt", en: "Legacy extension override"),
             recommendedDefault: qtTarget,
             candidateAppURLs: []
         )
@@ -328,7 +362,7 @@ struct DefaultAppSwitcherTests {
             kind: .urlScheme,
             identifier: "iina",
             extensions: [],
-            localizedDescription: "iina:// URL Şeması",
+            localizedDescription: "iina://",
             category: .scheme,
             currentBundleID: "com.colliderli.iina",
             currentAppURL: URL(fileURLWithPath: "/Applications/IINA.app"),
@@ -343,7 +377,7 @@ struct DefaultAppSwitcherTests {
 
         let resetResult = await manager.resetAssociations(
             [assoc1, assocExt, customSchemeNoTarget],
-            snapshotTitle: "Test Sıfırlama",
+            snapshotTitle: "Test Reset",
             snapshotStore: store
         )
         #expect(resetResult.succeeded == 2)
@@ -361,10 +395,11 @@ struct DefaultAppSwitcherTests {
         #expect(snapshots.count == 1)
 
         if let saved = snapshots.first {
-            let restoreResult = await manager.restoreSnapshot(saved)
+            let restoreResult = await manager.restoreSnapshot(saved, language: .english)
             #expect(restoreResult.succeeded == 1)
             #expect(restoreResult.skipped == 1)
             #expect(restoreResult.failed.count == 1)
+            #expect(restoreResult.failed.first?.reason.contains("no longer installed") == true)
         }
     }
 
@@ -411,11 +446,13 @@ struct DefaultAppSwitcherTests {
             let iinaReport = await inspector.inspect(app: iinaApp)
             #expect(iinaReport.codeSigning.isSigned == true)
             #expect(iinaReport.codeSigning.isAppleSigned == false)
-            #expect(iinaReport.entitlements.contains { $0.key == "com.apple.security.cs.disable-library-validation" })
+            let disableLib = iinaReport.entitlements.first { $0.key == "com.apple.security.cs.disable-library-validation" }
+            #expect(disableLib != nil)
+            #expect(disableLib?.title.text(for: .english) == "Disable Library Validation")
+            #expect(disableLib?.title.text(for: .turkish) == "Kütüphane Doğrulaması Devre Dışı")
             #expect(iinaReport.urlSchemes.contains { $0.scheme == "iina" })
         }
 
-        // Uninstalled orphaned app must not inspect /Applications or return bogus signing info
         let orphanedApp = InstalledApp(
             bundleID: "com.video.player.converter.fj.mp3",
             name: "com.video.player.converter.fj.mp3",

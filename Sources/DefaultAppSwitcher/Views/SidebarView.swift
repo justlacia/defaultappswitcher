@@ -4,13 +4,15 @@ import SwiftUI
 struct SidebarView: View {
     @Bindable var state: AppState
 
+    private var s: AppStrings { state.strings }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                     .font(.caption)
-                TextField("Uygulama ara...", text: $state.sidebarSearchText)
+                TextField(s.searchAppsPlaceholder, text: $state.sidebarSearchText)
                     .textFieldStyle(.plain)
                     .font(.callout)
                 if !state.sidebarSearchText.isEmpty {
@@ -36,13 +38,13 @@ struct SidebarView: View {
             .padding(.bottom, 6)
 
             List(selection: $state.selection) {
-                Section("Hızlı Yönetim") {
+                Section(s.quickManagementSection) {
                     NavigationLink(value: SidebarSelection.overview) {
                         HStack(spacing: 8) {
                             Image(systemName: "bolt.shield.fill")
                                 .foregroundStyle(.blue)
                                 .frame(width: 22)
-                            Text("Genel Bakış")
+                            Text(s.overviewTitle)
                                 .fontWeight(.medium)
                             Spacer()
                             if !state.thirdPartyOverrideAssociations.isEmpty {
@@ -58,7 +60,7 @@ struct SidebarView: View {
                 }
 
                 if !state.appsWithOverrides.isEmpty {
-                    Section("Özel Varsayılanı Olanlar") {
+                    Section(s.appsWithOverridesSection) {
                         ForEach(state.appsWithOverrides) { app in
                             NavigationLink(value: SidebarSelection.app(app.id)) {
                                 sidebarAppRow(app: app, highlightCount: true)
@@ -68,7 +70,7 @@ struct SidebarView: View {
                 }
 
                 Section {
-                    Toggle("Yalnızca 3. Parti Uygulamalar", isOn: $state.showOnlyThirdPartyInAllApps)
+                    Toggle(s.onlyThirdPartyApps, isOn: $state.showOnlyThirdPartyInAllApps)
                         .toggleStyle(.switch)
                         .controlSize(.mini)
                         .font(.caption)
@@ -80,7 +82,7 @@ struct SidebarView: View {
                         }
                     }
                 } header: {
-                    Text("Tüm Uygulamalar (\(state.filteredAllApps.count))")
+                    Text(s.allAppsSection(state.filteredAllApps.count))
                 }
             }
             .listStyle(.sidebar)
@@ -95,7 +97,7 @@ struct SidebarView: View {
                 Text(app.name)
                     .lineLimit(1)
                 if !app.isInstalled {
-                    Text("Kurulu değil")
+                    Text(s.notInstalledShort)
                         .font(.caption2)
                         .foregroundStyle(.orange)
                         .lineLimit(1)

@@ -4,6 +4,8 @@ import SwiftUI
 struct ContentView: View {
     @Bindable var state: AppState
 
+    private var s: AppStrings { state.strings }
+
     var body: some View {
         NavigationSplitView {
             SidebarView(state: state)
@@ -33,21 +35,31 @@ struct ContentView: View {
                     state.isShowingSnapshotsSheet = true
                 } label: {
                     Label(
-                        state.snapshots.isEmpty ? "Yedekler" : "Yedekler (\(state.snapshots.count))",
+                        state.snapshots.isEmpty ? s.snapshots : s.snapshotsCount(state.snapshots.count),
                         systemImage: "clock.arrow.circlepath"
                     )
                 }
-                .help("Sıfırlama yedeklerini görüntüle ve geri al")
+                .help(s.snapshotsTooltip)
 
                 Button {
                     Task {
                         await state.reloadAll()
                     }
                 } label: {
-                    Label("Yenile", systemImage: "arrow.clockwise")
+                    Label(s.refresh, systemImage: "arrow.clockwise")
                 }
                 .disabled(state.isLoadingInitial || state.isMutating)
-                .help("LaunchServices ve uygulama verilerini yenile (⌘R)")
+                .help(s.refreshTooltip)
+
+                Picker("", selection: $state.language) {
+                    ForEach(AppLanguage.allCases) { lang in
+                        Text(lang.shortLabel).tag(lang)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 84)
+                .help(s.languageSwitchTooltip)
             }
         }
         .task {
@@ -77,14 +89,14 @@ struct ContentView: View {
             } else if state.isLoadingInitial {
                 VStack(spacing: 10) {
                     ProgressView()
-                    Text("Uygulamalar taranıyor...")
+                    Text(s.scanningApps)
                         .foregroundStyle(.secondary)
                 }
             } else {
                 ContentUnavailableView(
-                    "Uygulama Seçin",
+                    s.selectAppTitle,
                     systemImage: "app.dashed",
-                    description: Text("Sol kenar çubuğundan incelemek veya varsayılanlarını sıfırlamak istediğiniz bir uygulamayı seçin.")
+                    description: Text(s.selectAppDescription)
                 )
             }
         }

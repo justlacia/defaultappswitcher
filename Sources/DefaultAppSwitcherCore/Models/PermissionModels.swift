@@ -6,19 +6,36 @@ public enum TCCAuthStatus: Sendable, Hashable {
     case limited
     case unknown(Int)
 
-    public var displayName: String {
-        switch self {
-        case .allowed: return "İzin Verildi"
-        case .denied: return "Reddedildi"
-        case .limited: return "Sınırlı"
-        case .unknown(let code): return "Bilinmiyor (\(code))"
+    public func displayName(in language: AppLanguage) -> String {
+        switch (self, language) {
+        case (.allowed, .turkish): return "İzin Verildi"
+        case (.allowed, .english): return "Allowed"
+        case (.denied, .turkish): return "Reddedildi"
+        case (.denied, .english): return "Denied"
+        case (.limited, .turkish): return "Sınırlı"
+        case (.limited, .english): return "Limited"
+        case (.unknown(let code), .turkish): return "Bilinmiyor (\(code))"
+        case (.unknown(let code), .english): return "Unknown (\(code))"
         }
+    }
+
+    public var displayName: String {
+        displayName(in: .turkish)
     }
 }
 
 public enum TCCScope: String, Sendable, Hashable {
-    case user = "Kullanıcı"
-    case system = "Sistem"
+    case user = "user"
+    case system = "system"
+
+    public func displayName(in language: AppLanguage) -> String {
+        switch (self, language) {
+        case (.user, .turkish): return "Kullanıcı"
+        case (.user, .english): return "User"
+        case (.system, .turkish): return "Sistem"
+        case (.system, .english): return "System"
+        }
+    }
 }
 
 public enum TCCReadState: Sendable, Hashable {
@@ -31,7 +48,7 @@ public enum TCCReadState: Sendable, Hashable {
 public struct TCCPermissionEntry: Identifiable, Sendable, Hashable {
     public let id: String
     public let serviceKey: String
-    public let displayName: String
+    public let displayName: LocalizedText
     public let symbolName: String
     public let tccutilName: String?
     public let status: TCCAuthStatus
@@ -42,7 +59,7 @@ public struct TCCPermissionEntry: Identifiable, Sendable, Hashable {
 
     public init(
         serviceKey: String,
-        displayName: String,
+        displayName: LocalizedText,
         symbolName: String,
         tccutilName: String?,
         status: TCCAuthStatus,
@@ -67,7 +84,7 @@ public struct TCCPermissionEntry: Identifiable, Sendable, Hashable {
 public struct DeclaredPrivacyPermission: Identifiable, Sendable, Hashable {
     public let id: String
     public let plistKey: String
-    public let displayName: String
+    public let displayName: LocalizedText
     public let symbolName: String
     public let usageDescription: String
     public let tccutilService: String?
@@ -75,7 +92,7 @@ public struct DeclaredPrivacyPermission: Identifiable, Sendable, Hashable {
 
     public init(
         plistKey: String,
-        displayName: String,
+        displayName: LocalizedText,
         symbolName: String,
         usageDescription: String,
         tccutilService: String?,
@@ -94,16 +111,16 @@ public struct DeclaredPrivacyPermission: Identifiable, Sendable, Hashable {
 public struct EntitlementItem: Identifiable, Sendable, Hashable {
     public let id: String
     public let key: String
-    public let title: String
-    public let explanation: String
-    public let valueSummary: String
+    public let title: LocalizedText
+    public let explanation: LocalizedText
+    public let valueSummary: LocalizedText
     public let isSensitive: Bool
 
     public init(
         key: String,
-        title: String,
-        explanation: String,
-        valueSummary: String,
+        title: LocalizedText,
+        explanation: LocalizedText,
+        valueSummary: LocalizedText,
         isSensitive: Bool
     ) {
         self.id = key
@@ -153,9 +170,19 @@ public struct CodeSigningInfo: Sendable, Hashable {
 }
 
 public enum BackgroundItemKind: String, Sendable, Hashable {
-    case loginItem = "Oturum Açma Öğesi"
-    case launchAgent = "LaunchAgent"
-    case helper = "Yardımcı Servis"
+    case loginItem
+    case launchAgent
+    case helper
+
+    public func displayName(in language: AppLanguage) -> String {
+        switch (self, language) {
+        case (.loginItem, .turkish): return "Oturum Açma Öğesi"
+        case (.loginItem, .english): return "Login Item"
+        case (.launchAgent, _): return "LaunchAgent"
+        case (.helper, .turkish): return "Yardımcı Servis"
+        case (.helper, .english): return "Helper Service"
+        }
+    }
 }
 
 public struct BackgroundItem: Identifiable, Sendable, Hashable {

@@ -2,11 +2,11 @@ import DefaultAppSwitcherCore
 import SwiftUI
 
 enum OverviewFilterMode: String, CaseIterable, Identifiable {
-    case thirdParty = "3. Parti"
-    case media = "Medya"
-    case collisions = "Çakışanlar"
-    case schemes = "URL Şemaları"
-    case all = "Tümü"
+    case thirdParty
+    case media
+    case collisions
+    case schemes
+    case all
 
     var id: String { rawValue }
 }
@@ -15,6 +15,8 @@ struct OverviewView: View {
     @Bindable var state: AppState
     @State private var filterMode: OverviewFilterMode = .thirdParty
     @State private var searchText: String = ""
+
+    private var s: AppStrings { state.strings }
 
     private var filteredAssociations: [AppAssociation] {
         let base: [AppAssociation]
@@ -37,7 +39,7 @@ struct OverviewView: View {
             item.displayExtensionsText.localizedCaseInsensitiveContains(query)
                 || item.identifier.localizedCaseInsensitiveContains(query)
                 || item.currentAppName.localizedCaseInsensitiveContains(query)
-                || item.localizedDescription.localizedCaseInsensitiveContains(query)
+                || item.descriptionText(in: state.language).localizedCaseInsensitiveContains(query)
         }
     }
 
@@ -52,7 +54,7 @@ struct OverviewView: View {
             }
             .padding(20)
         }
-        .navigationTitle("Genel Bakış")
+        .navigationTitle(s.overviewTitle)
     }
 
     private var heroCard: some View {
@@ -63,9 +65,9 @@ struct OverviewView: View {
                     .foregroundStyle(.blue)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Tek Tuşla Varsayılan Uygulamaları Sıfırla")
+                    Text(s.heroTitle)
                         .font(.title2.weight(.bold))
-                    Text("LaunchServices veritabanındaki özel dosya uzantısı ve medya atamalarını güvenle macOS varsayılanlarına (QuickTime Player, Müzik, TextEdit vb.) geri alın. Her işlem öncesi otomatik yedek alınır.")
+                    Text(s.heroSubtitle)
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -76,7 +78,7 @@ struct OverviewView: View {
                     state.promptMediaReset()
                 } label: {
                     Label(
-                        "Medya Uzantılarını Sıfırla (\(state.resettableThirdPartyMediaOverrides.count))",
+                        s.resetMediaButton(state.resettableThirdPartyMediaOverrides.count),
                         systemImage: "play.slash.fill"
                     )
                 }
@@ -88,7 +90,7 @@ struct OverviewView: View {
                     state.promptGlobalResetAll()
                 } label: {
                     Label(
-                        "Tüm Özel Varsayılanları Sıfırla (\(state.resettableThirdPartyOverrides.count))",
+                        s.resetAllOverridesButton(state.resettableThirdPartyOverrides.count),
                         systemImage: "trash.slash"
                     )
                 }
@@ -99,7 +101,7 @@ struct OverviewView: View {
                 Button {
                     state.isShowingSnapshotsSheet = true
                 } label: {
-                    Label("Yedekler / Geri Al", systemImage: "clock.arrow.circlepath")
+                    Label(s.backupsRestoreButton, systemImage: "clock.arrow.circlepath")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
@@ -124,23 +126,23 @@ struct OverviewView: View {
     private var metricsRow: some View {
         HStack(spacing: 12) {
             metricCard(
-                title: "3. Parti Özel Atama",
+                title: s.metricThirdPartyTitle,
                 value: "\(state.thirdPartyOverrideAssociations.count)",
-                subtitle: "Toplam \(state.allOverrideAssociations.count) kayıt içinde",
+                subtitle: s.metricThirdPartySubtitle(state.allOverrideAssociations.count),
                 icon: "doc.badge.gearshape",
                 tint: .blue
             )
             metricCard(
-                title: "Etkilenen Uygulama",
+                title: s.metricAffectedAppsTitle,
                 value: "\(state.affectedThirdPartyAppCount)",
-                subtitle: "Sol listeden detayına inin",
+                subtitle: s.metricAffectedAppsSubtitle,
                 icon: "square.stack.3d.up.fill",
                 tint: .indigo
             )
             metricCard(
-                title: "Tür Çakışması",
+                title: s.metricCollisionsTitle,
                 value: "\(state.collisionOverrideCount)",
-                subtitle: state.collisionOverrideCount > 0 ? "Örn. medya oynatıcıya bağlı .ts / .ps" : "Çakışma tespit edilmedi",
+                subtitle: state.collisionOverrideCount > 0 ? s.metricCollisionsSubtitleSome : s.metricCollisionsSubtitleNone,
                 icon: "exclamationmark.triangle.fill",
                 tint: state.collisionOverrideCount > 0 ? .orange : .green
             )
@@ -176,12 +178,12 @@ struct OverviewView: View {
     private var overridesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                Text("Aktif Varsayılan Atamalar")
+                Text(s.activeOverridesTitle)
                     .font(.headline)
 
-                Picker("Filtre", selection: $filterMode) {
+                Picker(s.filterLabel, selection: $filterMode) {
                     ForEach(OverviewFilterMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
+                        Text(s.overviewFilterTitle(mode)).tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -194,7 +196,7 @@ struct OverviewView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
                         .font(.caption)
-                    TextField("Uzantı, UTI veya uygulama ara...", text: $searchText)
+                    TextField(s.searchOverridesPlaceholder, text: $searchText)
                         .textFieldStyle(.plain)
                         .font(.callout)
                         .frame(width: 200)
@@ -219,13 +221,13 @@ struct OverviewView: View {
             }
 
             if state.isLoadingInitial && state.allOverrideAssociations.isEmpty {
-                ProgressView("LaunchServices kayıtları okunuyor...")
+                ProgressView(s.readingLaunchServices)
                     .frame(maxWidth: .infinity, minHeight: 140)
             } else if filteredAssociations.isEmpty {
                 ContentUnavailableView(
-                    "Kayıt Bulunamadı",
+                    s.noRecordsTitle,
                     systemImage: "checkmark.seal",
-                    description: Text("Seçili filtre için gösterilecek aktif varsayılan atama yok.")
+                    description: Text(s.noRecordsDescription)
                 )
                 .frame(maxWidth: .infinity, minHeight: 160)
             } else {
@@ -235,6 +237,7 @@ struct OverviewView: View {
                             association: assoc,
                             showCurrentApp: true,
                             isBusy: state.isMutating,
+                            strings: s,
                             onSelectCurrentApp: {
                                 state.selection = .app(assoc.normalizedBundleID)
                             },

@@ -48,9 +48,12 @@ struct AssociationRowView: View {
     let association: AppAssociation
     let showCurrentApp: Bool
     let isBusy: Bool
+    let strings: AppStrings
     var onSelectCurrentApp: (() -> Void)? = nil
     let onReset: () -> Void
     let onChooseApp: (URL) -> Void
+
+    private var lang: AppLanguage { strings.language }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -70,18 +73,18 @@ struct AssociationRowView: View {
                         .lineLimit(1)
 
                     if association.isSuspiciousCollision {
-                        PillBadge(text: "Çakışma", color: .orange, icon: "exclamationmark.triangle.fill")
+                        PillBadge(text: strings.collisionBadge, color: .orange, icon: "exclamationmark.triangle.fill")
                     } else if association.isExplicitOverride {
-                        PillBadge(text: "Özel Atama", color: .blue)
+                        PillBadge(text: strings.explicitOverrideBadge, color: .blue)
                     } else {
-                        PillBadge(text: "Varsayılan", color: .secondary)
+                        PillBadge(text: strings.defaultBadge, color: .secondary)
                     }
 
-                    PillBadge(text: association.category.displayName, color: .secondary)
+                    PillBadge(text: association.category.displayName(in: lang), color: .secondary)
                 }
 
                 HStack(spacing: 6) {
-                    Text(association.localizedDescription)
+                    Text(association.descriptionText(in: lang))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -97,7 +100,7 @@ struct AssociationRowView: View {
                 }
 
                 if let reason = association.collisionReason {
-                    Text(reason)
+                    Text(reason.text(for: lang))
                         .font(.caption2)
                         .foregroundStyle(.orange)
                 }
@@ -120,7 +123,7 @@ struct AssociationRowView: View {
                     .background(Color.secondary.opacity(0.1), in: Capsule())
                 }
                 .buttonStyle(.plain)
-                .help("\(association.currentAppName) detayını aç")
+                .help(strings.openAppDetailsTooltip(association.currentAppName))
             }
 
             if let target = association.recommendedDefault, association.canResetToSystemDefault {
@@ -137,11 +140,11 @@ struct AssociationRowView: View {
                 .frame(minWidth: 130, alignment: .trailing)
             } else if association.isSystemDefault {
                 HStack(spacing: 4) {
-                    PillBadge(text: "macOS Varsayılanı", color: .green, icon: "checkmark.circle.fill")
+                    PillBadge(text: strings.macOSDefaultBadge, color: .green, icon: "checkmark.circle.fill")
                 }
                 .frame(minWidth: 130, alignment: .trailing)
             } else {
-                Text("Sistem alternatifi yok")
+                Text(strings.noSystemAlternative)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .frame(minWidth: 130, alignment: .trailing)
@@ -149,7 +152,7 @@ struct AssociationRowView: View {
 
             Menu {
                 if association.candidateAppURLs.isEmpty {
-                    Text("Kayıtlı başka uygulama bulunamadı")
+                    Text(strings.noOtherAppsRegistered)
                 } else {
                     ForEach(association.candidateAppURLs, id: \.self) { appURL in
                         let name = DefaultAppResolver.displayName(for: appURL)
@@ -168,13 +171,13 @@ struct AssociationRowView: View {
                     }
                 }
             } label: {
-                Text("Değiştir")
+                Text(strings.changeButton)
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
             .disabled(isBusy || association.candidateAppURLs.isEmpty)
 
-            Button("Sıfırla") {
+            Button(strings.resetButton) {
                 onReset()
             }
             .buttonStyle(.bordered)

@@ -5,15 +5,19 @@ public enum HandlerKind: String, Codable, Sendable, CaseIterable, Hashable {
     case urlScheme
     case extensionOnly
 
-    public var displayName: String {
-        switch self {
-        case .contentType:
-            return "İçerik Türü (UTI)"
-        case .urlScheme:
-            return "URL Şeması"
-        case .extensionOnly:
-            return "Dosya Uzantısı"
+    public func displayName(in language: AppLanguage) -> String {
+        switch (self, language) {
+        case (.contentType, .turkish): return "İçerik Türü (UTI)"
+        case (.contentType, .english): return "Content Type (UTI)"
+        case (.urlScheme, .turkish): return "URL Şeması"
+        case (.urlScheme, .english): return "URL Scheme"
+        case (.extensionOnly, .turkish): return "Dosya Uzantısı"
+        case (.extensionOnly, .english): return "File Extension"
         }
+    }
+
+    public var displayName: String {
+        displayName(in: .turkish)
     }
 }
 
@@ -55,17 +59,27 @@ public enum AssociationCategory: String, Codable, Sendable, CaseIterable, Hashab
     case scheme
     case other
 
-    public var displayName: String {
-        switch self {
-        case .video: return "Video"
-        case .audio: return "Ses"
-        case .image: return "Görsel / PDF"
-        case .web: return "Web"
-        case .textCode: return "Metin / Kod"
-        case .archive: return "Arşiv"
-        case .scheme: return "URL Şeması"
-        case .other: return "Diğer"
+    public func displayName(in language: AppLanguage) -> String {
+        switch (self, language) {
+        case (.video, _): return "Video"
+        case (.audio, .turkish): return "Ses"
+        case (.audio, .english): return "Audio"
+        case (.image, .turkish): return "Görsel / PDF"
+        case (.image, .english): return "Image / PDF"
+        case (.web, _): return "Web"
+        case (.textCode, .turkish): return "Metin / Kod"
+        case (.textCode, .english): return "Text / Code"
+        case (.archive, .turkish): return "Arşiv"
+        case (.archive, .english): return "Archive"
+        case (.scheme, .turkish): return "URL Şeması"
+        case (.scheme, .english): return "URL Scheme"
+        case (.other, .turkish): return "Diğer"
+        case (.other, .english): return "Other"
         }
+    }
+
+    public var displayName: String {
+        displayName(in: .turkish)
     }
 
     public var symbolName: String {
@@ -111,7 +125,7 @@ public struct AppAssociation: Identifiable, Sendable, Hashable {
     public let isExplicitOverride: Bool
     public let overrideModDate: Date?
     public let isSuspiciousCollision: Bool
-    public let collisionReason: String?
+    public let collisionReason: LocalizedText?
     public let recommendedDefault: ResetTarget?
     public let candidateAppURLs: [URL]
 
@@ -127,7 +141,7 @@ public struct AppAssociation: Identifiable, Sendable, Hashable {
         isExplicitOverride: Bool,
         overrideModDate: Date?,
         isSuspiciousCollision: Bool,
-        collisionReason: String?,
+        collisionReason: LocalizedText?,
         recommendedDefault: ResetTarget?,
         candidateAppURLs: [URL]
     ) {
@@ -165,6 +179,14 @@ public struct AppAssociation: Identifiable, Sendable, Hashable {
     public var canResetToSystemDefault: Bool {
         guard let recommendedDefault else { return false }
         return recommendedDefault.bundleID.lowercased() != currentBundleID.lowercased()
+    }
+
+    public func descriptionText(in language: AppLanguage) -> String {
+        if kind == .urlScheme {
+            let suffix = language == .turkish ? "URL Şeması" : "URL Scheme"
+            return "\(identifier):// \(suffix)"
+        }
+        return localizedDescription
     }
 
     public var isSystemDefault: Bool {

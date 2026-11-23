@@ -2,82 +2,90 @@
 
 # DefaultAppSwitcher
 
-macOS üzerinde yanlışlıkla veya toplu şekilde değiştirilmiş varsayılan dosya açma uygulamalarını (`.mp3`, `.mp4`, `.avi`, `.mkv`, `.flac`, `.ts`, `.ps` vb.) **tek tuşla macOS varsayılanlarına sıfırlayan**, ayrıca yüklü uygulamaların gizlilik izinlerini (`TCC`), kod imzalarını, Sandbox/Entitlement yetkilerini ve arka plan servislerini inceleyip sıfırlayabilen yerel (SwiftUI) bir macOS aracıdır.
+**English** | **[Türkçe](#türkçe)**
+
+A native SwiftUI macOS utility that resets accidentally overridden default file associations (`.mp3`, `.mp4`, `.avi`, `.mkv`, `.flac`, `.ts`, `.ps`, etc.) back to standard macOS apps **in one click**, and lets you inspect and reset any installed app's privacy permissions (`TCC`), code signature, Sandbox/Entitlements, and background items.
+
+> **New in v1.1.0:** Full **English & Turkish** localization! Automatically launches in your Mac's system language (Turkish on `tr*` systems, English on all others) and includes a live **`TR | EN`** toggle switch in the top-right toolbar.
 
 ---
 
-## İndirme (Download)
+## Download
 
-Hazır derlenmiş Universal uygulamayı **GitHub Releases** üzerinden doğrudan indirebilirsiniz:
+Pre-built **Universal macOS** binaries are available on **GitHub Releases**:
 
-- **[Son Sürümü İndir (Releases)](https://github.com/justlacia/defaultappswitcher/releases/latest)**
-  - **`DefaultAppSwitcher-v1.0.0-macOS-Universal.dmg`** — Sürükle-bırak kurulum paketi (önerilen)
-  - **`DefaultAppSwitcher-v1.0.0-macOS-Universal.zip`** — Doğrudan sıkıştırılmış `.app` paketi
+- **[Download Latest Release (v1.1.0)](https://github.com/justlacia/defaultappswitcher/releases/latest)**
+  - **`DefaultAppSwitcher-v1.1.0-macOS-Universal.dmg`** — Drag-and-drop installer image (recommended)
+  - **`DefaultAppSwitcher-v1.1.0-macOS-Universal.zip`** — Compressed `.app` bundle
 
-> **İlk Açılış Notu (Gatekeeper):** Uygulama Apple Notarization sertifikası yerine ad-hoc imzalıdır. İlk açılışta macOS *"geliştiricisi doğrulanamıyor"* uyarısı verirse uygulamaya **Sağ Tık → Aç** diyebilir veya Terminal'de şu komutu çalıştırabilirsiniz:
+> **First Launch (Gatekeeper):** Because this app is ad-hoc signed rather than notarized with a paid Apple Developer ID certificate, macOS may show a warning on first launch. Use **Right-Click → Open** or run:
 > ```bash
 > xattr -cr /Applications/DefaultAppSwitcher.app
 > ```
 
 ---
 
-## Desteklenen Sürümler & Sistem Gereksinimleri
+## Supported Versions & Requirements
 
-| Özellik | Desteklenen Değer |
+| Requirement | Support |
 |---|---|
-| **İşletim Sistemi** | **macOS 14.0 (Sonoma)** ve üzeri (macOS 14 Sonoma, macOS 15 Sequoia, macOS 26/27 Tahoe+) |
-| **İşlemci Mimarisi** | **Universal Binary** — hem **Apple Silicon (M1 / M2 / M3 / M4 / M5 — `arm64`)** hem **Intel (`x86_64`)** Mac'ler |
-| **Platform** | Yalnızca macOS (Windows, Linux ve iOS desteklenmez) |
-| **Kaynaktan Derleme** | Xcode 16+ / Swift 6.0+ |
+| **Operating System** | **macOS 14.0 (Sonoma)** and newer (macOS 14 Sonoma, macOS 15 Sequoia, macOS 26/27 Tahoe+) |
+| **Architecture** | **Universal Binary** — native **Apple Silicon (M1–M5 / `arm64`)** and **Intel (`x86_64`)** |
+| **Platform** | macOS only (Windows, Linux, and iOS are not supported) |
+| **Build from Source** | Xcode 16+ / Swift 6.0+ |
 
 ---
 
-## Hangi Sorun İçin Yapıldı?
+## Problem Solved
 
-macOS'ta yeni bir medya oynatıcı (örneğin **IINA** veya **VLC**) kurup *"Tüm medya türleri için varsayılan yap"* seçeneğini işaretlediğinizde sık karşılaşılan birkaç ciddi sorun oluşur:
+When installing a media player on macOS (such as **IINA** or **VLC**) and clicking *"Set as default for all supported files"*, several frustrating issues occur:
 
-1. **Tek Tuşla Geri Alma Yok:** Finder'da tek tek her uzantı için *"Bilgi Ver → Birlikte Aç → Tümünü Değiştir"* yapmak zorunda kalırsınız. `.mp4`, `.mkv`, `.avi`, `.mov`, `.mp3`, `.flac`, `.aac` gibi onlarca uzantıyı tek tek düzeltmek uzun sürer.
-2. **Alakasız Türlerin Ele Geçirilmesi (Tür Çakışmaları):** Bazı medya uygulamaları yazılım geliştirme dosyalarını (`.ts` / `.tsx` — TypeScript) veya belge formatlarını (`.ps` — PostScript, `.cue`) da medya uzantısı sanıp kendine bağlayabilir.
-3. **Eski ve Silinmiş Uygulama Kalıntıları:** Sistemden sildiğiniz eski uygulamaların `LaunchServices` veritabanında bıraktığı eski `extension:` veya `HandlerPref` kayıtları macOS Ayarları'nda görünmez.
-4. **Gizli Uygulama İzinlerini Görme Zorluğu:** Bir uygulamanın kod imzası, Sandbox durumu, hangi gizli yetkilere (`entitlements`) veya gizlilik izinlerine (`Kamera`, `Mikrofon`, `Klasör Erişimi`, `Otomasyon`) sahip olduğunu tek bir ekranda görmek ve gerektiğinde sıfırlamak zordur.
+1. **No Bulk Reset in macOS:** Finder requires fixing `.mp4`, `.mkv`, `.avi`, `.mov`, `.mp3`, `.flac`, `.aac`, etc. one extension at a time via *Get Info → Open with → Change All*.
+2. **Non-Media Hijacks (Type Collisions):** Media players sometimes claim developer or document formats such as `.ts` / `.tsx` (TypeScript) or `.ps` (PostScript).
+3. **Orphaned Records from Deleted Apps:** Legacy `HandlerPref` / `extension:` entries left behind by uninstalled apps don't appear cleanly in System Settings.
+4. **Hidden App Permissions & Entitlements:** Viewing an app's code signing status, App Sandbox, Hardened Runtime, embedded entitlements, and `TCC` privacy permissions—and resetting them cleanly—normally requires multiple terminal commands.
 
-**DefaultAppSwitcher**, macOS'un `LaunchServices` veritabanını (`lsregister -dump HandlerPref`), `NSWorkspace` ve `UniformTypeIdentifiers` API'lerini, `Security.framework` imza/yetki analizini ve `tccutil` altyapısını tek bir hızlı macOS arayüzünde birleştirerek bu sorunları çözer.
-
----
-
-## Özellikler
-
-- **Genel Bakış & Tek Tuşla Sıfırlama**
-  - **Medya Uzantılarını Sıfırla:** Video, ses ve medya oynatıcılara yanlışlıkla bağlanmış uzantıları akıllı sistem eşleştirmesiyle (`QuickTime Player`, `Müzik`, `TV`, `TextEdit`, `Preview`) geri döndürür. (Örneğin `.aac`/`.ac3` dosyalarını Apple Books yerine QuickTime Player'a, `.mp3`/`.m4a`/`.wav` dosyalarını Müzik'e, `.ts` TypeScript dosyalarını TextEdit'e atar.)
-  - **Tüm Özel Varsayılanları Sıfırla:** 3. parti uygulamalara atanmış tüm dosya uzantılarını (ve isteğe bağlı olarak tarayıcı/URL şemalarını) sıfırlar.
-  - **Otomatik Yedekleme (Geri Al):** Her sıfırlama veya uygulama değişikliği öncesi `~/Library/Application Support/DefaultAppSwitcher/snapshots.json` içine geri yükleme noktası kaydeder; istediğiniz an tek tıkla önceki hale dönebilirsiniz.
-- **Uygulama Bazlı Yönetim**
-  - Özel varsayılan ataması bulunan tüm uygulamaları (silinmiş uygulamaların kalıntı kayıtları dahil) üstte sıralar.
-  - Her uzantı veya UTI satırını tek tek sıfırlayabilir ya da **Değiştir** menüsüyle istediğiniz başka bir uygulamaya atayabilirsiniz.
-  - Yanlışlıkla ele geçirilmiş türleri **Çakışma** etiketiyle vurgular.
-- **İzinler & Güvenlik İnceleyici**
-  - `Info.plist` gizlilik açıklamaları (`NS*UsageDescription`) ve ilgili Sistem Ayarları kısayolları.
-  - `Security.framework` ile kod imzası, Geliştirici/Takım Kimliği, App Sandbox, Hardened Runtime, Gatekeeper karantina durumu ve tüm gömülü `entitlements` açıklamaları.
-  - Tam Disk Erişimi verildiğinde canlı `TCC.db` izin durumlarını okuma ve tek tıkla `tccutil reset` ile izin sıfırlama.
-  - URL şemaları (`iina://` vb.) ve arka plan öğeleri (`LoginItems`, `LaunchAgents`, yardımcı servisler).
+**DefaultAppSwitcher** combines `LaunchServices` (`lsregister -dump HandlerPref`), `NSWorkspace` / `UniformTypeIdentifiers`, `Security.framework`, and `tccutil` into a fast native macOS interface with automatic undo snapshots.
 
 ---
 
-## Kaynaktan Derleme ve Test
+## Build & Test from Source
 
 ```bash
-# Birim testlerini çalıştır (sistem varsayılanlarını değiştirmez)
+# Run unit tests (read-only / mocked; does not modify your macOS defaults)
 swift test
 
-# Universal Binary (.app, .dmg ve .zip) oluştur
-bash scripts/build_app.sh
+# Build Universal Binary (.app, .dmg, and .zip)
+bash scripts/build_app.sh 1.1.0
 
-# Uygulamayı çalıştır
+# Launch app
 open "build/DefaultAppSwitcher.app"
 ```
 
 ---
 
-## Lisans
+## Türkçe
+
+macOS üzerinde yanlışlıkla veya toplu şekilde değiştirilmiş varsayılan dosya açma uygulamalarını (`.mp3`, `.mp4`, `.avi`, `.mkv`, `.flac`, `.ts`, `.ps` vb.) **tek tuşla macOS varsayılanlarına sıfırlayan**, ayrıca uygulamaların gizlilik izinlerini (`TCC`), kod imzalarını, Sandbox/Entitlement yetkilerini ve arka plan öğelerini inceleyip sıfırlayabilen yerel (SwiftUI) bir macOS aracıdır.
+
+> **v1.1.0 Yenilikleri:** Tam **İngilizce ve Türkçe** dil desteği! Uygulama bilgisayarınızın sistem diline göre (Türkçe ise Türkçe, değilse İngilizce) otomatik açılır ve sağ üst araç çubuğundaki **`TR | EN`** anahtarıyla anlık dil değiştirilebilir.
+
+### İndirme ve Desteklenen Sürümler
+
+- **[Son Sürümü İndir (GitHub Releases — v1.1.0)](https://github.com/justlacia/defaultappswitcher/releases/latest)**
+  - **`DefaultAppSwitcher-v1.1.0-macOS-Universal.dmg`** (önerilen) veya **`DefaultAppSwitcher-v1.1.0-macOS-Universal.zip`**
+- **Desteklenen macOS Sürümleri:** **macOS 14.0 (Sonoma)** ve üzeri (macOS 14 Sonoma, macOS 15 Sequoia, macOS 26/27 Tahoe+)
+- **İşlemci Desteği:** **Universal Binary** — **Apple Silicon (`arm64`)** ve **Intel (`x86_64`)** Mac'ler
+
+### Özellikler
+
+- **Genel Bakış & Tek Tuşla Sıfırlama:** Medya uzantılarını veya tüm 3. parti özel atamaları akıllı sistem eşleştirmesiyle (`QuickTime Player`, `Müzik`, `TV`, `TextEdit`, `Preview`) geri alır; `.aac`/`.ac3` dosyalarını Apple Books yerine QuickTime Player'a, `.ts` dosyalarını TextEdit'e yönlendirir.
+- **Otomatik Yedekleme (Geri Al):** Her işlem öncesi `~/Library/Application Support/DefaultAppSwitcher/snapshots.json` içine geri yükleme noktası kaydeder.
+- **Tür Çakışması & Silinmiş Uygulama Tespiti:** Medya oynatıcılara yanlışlıkla bağlanan `.ts`/`.ps` uzantılarını ve sistemden silinmiş uygulamaların hayalet `LaunchServices` kayıtlarını yakalar.
+- **İzinler & Güvenlik İnceleyici:** `Info.plist` gizlilik anahtarlarını, `Security.framework` ile imza/Sandbox/Entitlement yetkilerini, canlı `TCC.db` onaylarını (Tam Disk Erişimi verildiğinde) ve `tccutil reset` ile izin sıfırlamayı sunar.
+
+---
+
+## License
 
 [MIT License](LICENSE) © 2026 Haluk (justlacia)

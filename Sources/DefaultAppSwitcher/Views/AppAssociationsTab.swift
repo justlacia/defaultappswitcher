@@ -9,6 +9,8 @@ struct AppAssociationsTab: View {
     @State private var selectedCategory: AssociationCategory? = nil
     @State private var showOtherExtensions: Bool = false
 
+    private var s: AppStrings { state.strings }
+
     private var collisionItems: [AppAssociation] {
         state.selectedAppAssociations.filter { $0.isSuspiciousCollision }
     }
@@ -22,7 +24,7 @@ struct AppAssociationsTab: View {
             guard !query.isEmpty else { return true }
             return item.displayExtensionsText.localizedCaseInsensitiveContains(query)
                 || item.identifier.localizedCaseInsensitiveContains(query)
-                || item.localizedDescription.localizedCaseInsensitiveContains(query)
+                || item.descriptionText(in: state.language).localizedCaseInsensitiveContains(query)
         }
     }
 
@@ -42,9 +44,9 @@ struct AppAssociationsTab: View {
 
                 if filteredAssociations.isEmpty {
                     ContentUnavailableView(
-                        "Varsayılan Atama Yok",
+                        s.noAssociationsTitle,
                         systemImage: "checkmark.circle",
-                        description: Text("\(app.name) şu anda seçili filtreye göre hiçbir uzantının varsayılan uygulaması değil.")
+                        description: Text(s.noAssociationsDescription(app.name))
                     )
                     .frame(maxWidth: .infinity, minHeight: 180)
                 } else {
@@ -54,6 +56,7 @@ struct AppAssociationsTab: View {
                                 association: assoc,
                                 showCurrentApp: false,
                                 isBusy: state.isMutating,
+                                strings: s,
                                 onReset: {
                                     Task {
                                         await state.resetSingleAssociation(assoc)
@@ -84,20 +87,20 @@ struct AppAssociationsTab: View {
                 .foregroundStyle(.orange)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Dikkat: \(collisionItems.count) Tür Çakışması Tespit Edildi")
+                Text(s.collisionWarningTitle(collisionItems.count))
                     .font(.callout.weight(.semibold))
-                Text(collisionItems.map { $0.displayExtensionsText }.joined(separator: ", ") + " türleri yanlışlıkla bu uygulamaya atanmış görünüyor.")
+                Text(s.collisionWarningDetail(collisionItems.map { $0.displayExtensionsText }.joined(separator: ", ")))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            Button("Çakışanları Sıfırla") {
+            Button(s.resetCollisionsButton) {
                 Task {
                     await state.performBulkReset(
                         items: collisionItems,
-                        snapshotTitle: "\(app.name) çakışan uzantıları sıfırlandı"
+                        snapshotTitle: s.collisionsResetSnapshotTitle(app.name)
                     )
                 }
             }
@@ -118,10 +121,10 @@ struct AppAssociationsTab: View {
         HStack(spacing: 8) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    categoryButton(title: "Tümü (\(state.selectedAppAssociations.count))", category: nil)
+                    categoryButton(title: s.allCategoryCount(state.selectedAppAssociations.count), category: nil)
                     ForEach(availableCategories, id: \.self) { category in
                         let count = state.selectedAppAssociations.filter { $0.category == category }.count
-                        categoryButton(title: "\(category.displayName) (\(count))", category: category)
+                        categoryButton(title: "\(category.displayName(in: state.language)) (\(count))", category: category)
                     }
                 }
             }
@@ -132,7 +135,7 @@ struct AppAssociationsTab: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                     .font(.caption)
-                TextField("Uzantı veya UTI ara...", text: $searchText)
+                TextField(s.searchExtensionPlaceholder, text: $searchText)
                     .textFieldStyle(.plain)
                     .font(.callout)
                     .frame(width: 180)
@@ -177,7 +180,7 @@ struct AppAssociationsTab: View {
 
     private var otherExtensionsDisclosure: some View {
         DisclosureGroup(
-            "Desteklediği Ancak Varsayılan Olmadığı Uzantılar (\(state.selectedAppOtherExtensions.count))",
+            s.otherExtensionsTitle(state.selectedAppOtherExtensions.count),
             isExpanded: $showOtherExtensions
         ) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 8)], spacing: 8) {
@@ -186,7 +189,7 @@ struct AppAssociationsTab: View {
                         Text(".\(item.ext)")
                             .font(.system(.caption, design: .monospaced).weight(.semibold))
                         Spacer()
-                        Text(item.currentAppName ?? "Yok")
+                        Text(item.currentAppName ?? s.noneText)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)

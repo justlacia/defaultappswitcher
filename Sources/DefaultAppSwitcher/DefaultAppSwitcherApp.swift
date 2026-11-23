@@ -18,7 +18,7 @@ struct DefaultAppSwitcherApp: App {
     @State private var appState = AppState()
 
     var body: some Scene {
-        WindowGroup("DefaultAppSwitcher") {
+        WindowGroup(appState.strings.windowTitle) {
             ContentView(state: appState)
                 .frame(minWidth: 960, minHeight: 640)
         }
@@ -26,7 +26,7 @@ struct DefaultAppSwitcherApp: App {
         .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Yenile") {
+                Button(appState.strings.refresh) {
                     Task {
                         await appState.reloadAll()
                     }

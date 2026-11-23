@@ -7,8 +7,8 @@ cd "$ROOT_DIR"
 APP_NAME="DefaultAppSwitcher"
 EXEC_NAME="DefaultAppSwitcher"
 BUNDLE_ID="com.justlacia.defaultappswitcher"
-VERSION="${1:-1.0.0}"
-BUILD_NUMBER="1"
+VERSION="${1:-1.1.0}"
+BUILD_NUMBER="2"
 
 BUILD_DIR="$ROOT_DIR/build"
 DIST_DIR="$ROOT_DIR/dist"
@@ -55,7 +55,12 @@ cat > "$CONTENTS_DIR/Info.plist" <<EOF
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>tr</string>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>tr</string>
+    </array>
     <key>CFBundleDisplayName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleExecutable</key>

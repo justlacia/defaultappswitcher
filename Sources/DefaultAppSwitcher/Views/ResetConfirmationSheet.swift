@@ -8,6 +8,8 @@ struct ResetConfirmationSheet: View {
 
     @State private var includeBrowserAndSchemes: Bool = false
 
+    private var s: AppStrings { state.strings }
+
     private var activeItems: [AppAssociation] {
         let source = includeBrowserAndSchemes ? confirmation.allThirdPartyItems : confirmation.items
         return source.filter { $0.canResetToSystemDefault }
@@ -48,7 +50,7 @@ struct ResetConfirmationSheet: View {
 
             if confirmation.includesBrowserAndSchemesToggle {
                 Toggle(
-                    "Tarayıcı (http/https/html) ve diğer URL şemalarını da Safari'ye sıfırla",
+                    s.toggleBrowserAndSchemes,
                     isOn: $includeBrowserAndSchemes
                 )
                 .font(.callout)
@@ -57,11 +59,11 @@ struct ResetConfirmationSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Önizleme — Toplam \(activeItems.count) atama sıfırlanacak:")
+                Text(s.previewResetHeader(activeItems.count))
                     .font(.callout.weight(.semibold))
 
                 if groupedTargets.isEmpty {
-                    Text("Sıfırlanabilecek uygun bir atama bulunamadı.")
+                    Text(s.noResettableFound)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .padding(12)
@@ -72,7 +74,7 @@ struct ResetConfirmationSheet: View {
                                 HStack(spacing: 10) {
                                     AppIconView(url: group.target.appURL, size: 28)
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("\(group.count) uzantı → \(group.target.appName)")
+                                        Text(s.extensionTargetLine(group.count, group.target.appName))
                                             .font(.callout.weight(.medium))
                                         Text(group.sampleExtensions.joined(separator: ", "))
                                             .font(.caption2)
@@ -93,19 +95,19 @@ struct ResetConfirmationSheet: View {
             HStack(spacing: 6) {
                 Image(systemName: "clock.arrow.circlepath")
                     .foregroundStyle(.green)
-                Text("İşlem öncesi mevcut tüm varsayılanlarınız otomatik yedeklenir; istediğiniz an Yedekler menüsünden geri alabilirsiniz.")
+                Text(s.snapshotNotice)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             HStack {
                 Spacer()
-                Button("Vazgeç") {
+                Button(s.cancelButton) {
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
 
-                Button("Onayla ve Sıfırla (\(activeItems.count))") {
+                Button(s.confirmAndResetButton(activeItems.count)) {
                     let itemsToReset = activeItems
                     let title = confirmation.title
                     dismiss()

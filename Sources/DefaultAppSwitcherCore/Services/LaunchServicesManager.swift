@@ -12,15 +12,25 @@ public enum LaunchServicesError: LocalizedError, Sendable {
     case setDefaultFailed(identifier: String, reason: String)
     case noTargetApp(identifier: String)
 
-    public var errorDescription: String? {
-        switch self {
-        case .lsregisterFailed(let detail):
+    public func message(in language: AppLanguage) -> String {
+        switch (self, language) {
+        case (.lsregisterFailed(let detail), .turkish):
             return "LaunchServices veritabanı okunamadı: \(detail)"
-        case .setDefaultFailed(let identifier, let reason):
+        case (.lsregisterFailed(let detail), .english):
+            return "Failed to read LaunchServices database: \(detail)"
+        case (.setDefaultFailed(let identifier, let reason), .turkish):
             return "\(identifier) için varsayılan uygulama değiştirilemedi: \(reason)"
-        case .noTargetApp(let identifier):
+        case (.setDefaultFailed(let identifier, let reason), .english):
+            return "Failed to change default app for \(identifier): \(reason)"
+        case (.noTargetApp(let identifier), .turkish):
             return "\(identifier) için uygun bir sistem varsayılan uygulaması bulunamadı."
+        case (.noTargetApp(let identifier), .english):
+            return "No suitable system default app found for \(identifier)."
         }
+    }
+
+    public var errorDescription: String? {
+        message(in: AppLanguage.detectSystemLanguage())
     }
 }
 
@@ -471,7 +481,7 @@ public final class LaunchServicesManager: Sendable {
         try await mutator.setDefault(appURL: targetURL, bundleID: bundleID, for: item.kind, identifier: item.identifier)
     }
 
-    public func restoreSnapshot(_ snapshot: ResetSnapshot) async -> ResetResult {
+    public func restoreSnapshot(_ snapshot: ResetSnapshot, language: AppLanguage = .english) async -> ResetResult {
         var succeeded = 0
         var skipped = 0
         var failures: [ResetFailure] = []
@@ -487,10 +497,13 @@ public final class LaunchServicesManager: Sendable {
 
             guard let appURL = resolvedURL else {
                 skipped += 1
+                let reason = language == .turkish
+                    ? "Önceki uygulama (\(entry.previousBundleID)) artık sistemde bulunamadı."
+                    : "Previous application (\(entry.previousBundleID)) is no longer installed."
                 failures.append(
                     ResetFailure(
                         identifier: entry.identifier,
-                        reason: "Önceki uygulama (\(entry.previousBundleID)) artık sistemde bulunamadı."
+                        reason: reason
                     )
                 )
                 continue

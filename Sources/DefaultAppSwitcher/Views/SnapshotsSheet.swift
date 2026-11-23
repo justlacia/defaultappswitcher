@@ -5,26 +5,28 @@ struct SnapshotsSheet: View {
     @Bindable var state: AppState
     @Environment(\.dismiss) private var dismiss
 
-    private let dateFormatter: DateFormatter = {
+    private var s: AppStrings { state.strings }
+
+    private func formattedDate(_ date: Date) -> String {
         let df = DateFormatter()
-        df.locale = Locale(identifier: "tr_TR")
+        df.locale = Locale(identifier: state.language.localeIdentifier)
         df.dateStyle = .medium
         df.timeStyle = .short
-        return df
-    }()
+        return df.string(from: date)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Sıfırlama Yedekleri (Geri Al)")
+                    Text(s.snapshotsTitle)
                         .font(.title3.weight(.bold))
-                    Text("Her sıfırlama işleminden önce mevcut uzantı eşleştirmeleriniz otomatik kaydedilir.")
+                    Text(s.snapshotsSubtitle)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Kapat") {
+                Button(s.closeButton) {
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
@@ -32,9 +34,9 @@ struct SnapshotsSheet: View {
 
             if state.snapshots.isEmpty {
                 ContentUnavailableView(
-                    "Henüz Yedek Yok",
+                    s.noSnapshotsTitle,
                     systemImage: "clock.arrow.circlepath",
-                    description: Text("Bir varsayılan sıfırlama veya değiştirme işlemi yaptığınızda otomatik geri yükleme noktası burada görünür.")
+                    description: Text(s.noSnapshotsDescription)
                 )
                 .frame(maxWidth: .infinity, minHeight: 220)
             } else {
@@ -49,14 +51,14 @@ struct SnapshotsSheet: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(snapshot.title)
                                         .font(.callout.weight(.semibold))
-                                    Text("\(dateFormatter.string(from: snapshot.createdAt)) • \(snapshot.entries.count) atama")
+                                    Text(s.snapshotEntriesMeta(formattedDate(snapshot.createdAt), snapshot.entries.count))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
 
                                 Spacer()
 
-                                Button("Geri Yükle") {
+                                Button(s.restoreButton) {
                                     Task {
                                         await state.restoreSnapshot(snapshot)
                                     }

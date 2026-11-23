@@ -9,8 +9,8 @@ enum SidebarSelection: Hashable {
 }
 
 enum AppDetailTab: String, CaseIterable, Identifiable {
-    case associations = "Varsayılan Uzantılar"
-    case permissions = "İzinler & Güvenlik"
+    case associations
+    case permissions
 
     var id: String { rawValue }
 }
@@ -34,9 +34,21 @@ struct StatusBanner: Identifiable {
 @MainActor
 @Observable
 final class AppState {
+    static let languageDefaultsKey = "DefaultAppSwitcher.appLanguage"
+
     private let lsManager = LaunchServicesManager()
     private let permissionInspector = AppPermissionInspector()
     private let snapshotStore = SnapshotStore()
+
+    var language: AppLanguage {
+        didSet {
+            UserDefaults.standard.set(language.rawValue, forKey: Self.languageDefaultsKey)
+        }
+    }
+
+    var strings: AppStrings {
+        AppStrings(language: language)
+    }
 
     var selection: SidebarSelection? = .overview
     var sidebarSearchText: String = ""
@@ -62,6 +74,11 @@ final class AppState {
     var pendingResetConfirmation: PendingResetConfirmation?
     var isShowingSnapshotsSheet: Bool = false
     var statusBanner: StatusBanner?
+
+    init() {
+        let stored = UserDefaults.standard.string(forKey: Self.languageDefaultsKey)
+        self.language = AppLanguage.resolveInitial(storedCode: stored)
+    }
 
     var appsWithOverrides: [InstalledApp] {
         installedApps
@@ -147,9 +164,10 @@ final class AppState {
                 await loadDetail(for: app)
             }
         } catch {
+            let detail = (error as? LaunchServicesError)?.message(in: language) ?? error.localizedDescription
             statusBanner = StatusBanner(
-                title: "Veriler yüklenemedi",
-                detail: error.localizedDescription,
+                title: strings.loadFailedTitle,
+                detail: detail,
                 isError: true
             )
         }
@@ -207,8 +225,8 @@ final class AppState {
         let thirdParty = resettableThirdPartyOverrides
         let fileOnly = resettableThirdPartyFileOverrides
         pendingResetConfirmation = PendingResetConfirmation(
-            title: "Tüm Özel Varsayılanları Sıfırla",
-            subtitle: "Sistem dışı uygulamalara atanmış tüm dosya uzantılarını macOS varsayılanlarına (QuickTime, Müzik, TextEdit vb.) döndürür.",
+            title: strings.globalResetTitle,
+            subtitle: strings.globalResetSubtitle,
             items: fileOnly,
             includesBrowserAndSchemesToggle: true,
             allThirdPartyItems: thirdParty
@@ -218,8 +236,8 @@ final class AppState {
     func promptMediaReset() {
         let mediaItems = resettableThirdPartyMediaOverrides
         pendingResetConfirmation = PendingResetConfirmation(
-            title: "Medya Uzantılarını Sıfırla",
-            subtitle: "Video, ses ve yanlışlıkla medya oynatıcılara bağlanmış (.ts, .ps vb.) uzantıları tek tuşla Apple uygulamalarına döndürür.",
+            title: strings.mediaResetTitle,
+            subtitle: strings.mediaResetSubtitle,
             items: mediaItems,
             includesBrowserAndSchemesToggle: false,
             allThirdPartyItems: mediaItems
@@ -238,8 +256,8 @@ final class AppState {
         guard let app = selectedApp else { return }
         let resettable = resettableSelectedAppAssociations
         pendingResetConfirmation = PendingResetConfirmation(
-            title: "\(app.name) Varsayılanlarını Sıfırla",
-            subtitle: "\(app.name) uygulamasına bağlı varsayılan dosya uzantıları önerilen sistem uygulamalarına geri alınacaktır.",
+            title: strings.appResetTitle(app.name),
+            subtitle: strings.appResetSubtitle(app.name),
             items: resettable,
             includesBrowserAndSchemesToggle: false,
             allThirdPartyItems: resettable
@@ -254,7 +272,7 @@ final class AppState {
     func resetSingleAssociation(_ item: AppAssociation) async {
         await performBulkReset(
             items: [item],
-            snapshotTitle: "\(item.displayExtensionsText) sıfırlandı"
+            snapshotTitle: strings.singleResetSnapshotTitle(item.displayExtensionsText)
         )
     }
 
@@ -267,15 +285,16 @@ final class AppState {
             try await lsManager.setAssociation(item, to: appURL, bundleID: targetBundleID, snapshotStore: snapshotStore)
             let targetName = DefaultAppResolver.displayName(for: appURL)
             statusBanner = StatusBanner(
-                title: "\(item.displayExtensionsText) güncellendi",
-                detail: "Yeni varsayılan uygulama: \(targetName)",
+                title: strings.updatedTitle(item.displayExtensionsText),
+                detail: strings.newDefaultDetail(targetName),
                 isError: false
             )
             await reloadAll()
         } catch {
+            let detail = (error as? LaunchServicesError)?.message(in: language) ?? error.localizedDescription
             statusBanner = StatusBanner(
-                title: "Varsayılan değiştirilemedi",
-                detail: error.localizedDescription,
+                title: strings.changeFailedTitle,
+                detail: detail,
                 isError: true
             )
         }
@@ -293,14 +312,14 @@ final class AppState {
 
         if result.failed.isEmpty {
             statusBanner = StatusBanner(
-                title: "\(result.succeeded) uzantı varsayılana sıfırlandı",
-                detail: result.skipped > 0 ? "\(result.skipped) öğe atlandı (sistem alternatifi yok). Yedek kaydedildi." : "Otomatik yedek oluşturuldu; istediğiniz zaman Geri Al ile dönebilirsiniz.",
+                title: strings.resetSuccessTitle(result.succeeded),
+                detail: strings.resetSuccessDetail(skipped: result.skipped),
                 isError: false
             )
         } else {
             let firstErr = result.failed.first?.reason ?? ""
             statusBanner = StatusBanner(
-                title: "\(result.succeeded) sıfırlandı, \(result.failed.count) başarısız",
+                title: strings.resetPartialTitle(succeeded: result.succeeded, failed: result.failed.count),
                 detail: firstErr,
                 isError: result.succeeded == 0
             )
@@ -316,16 +335,16 @@ final class AppState {
         defer { isMutating = false }
         isShowingSnapshotsSheet = false
 
-        let result = await lsManager.restoreSnapshot(snapshot)
+        let result = await lsManager.restoreSnapshot(snapshot, language: language)
         if result.failed.isEmpty {
             statusBanner = StatusBanner(
-                title: "Yedek geri yüklendi",
-                detail: "\(result.succeeded) varsayılan atama önceki haline döndürüldü.",
+                title: strings.restoreSuccessTitle,
+                detail: strings.restoreSuccessDetail(result.succeeded),
                 isError: false
             )
         } else {
             statusBanner = StatusBanner(
-                title: "Kısmi geri yükleme: \(result.succeeded) başarılı, \(result.failed.count) hata",
+                title: strings.restorePartialTitle(succeeded: result.succeeded, failed: result.failed.count),
                 detail: result.failed.first?.reason,
                 isError: result.succeeded == 0
             )
@@ -345,17 +364,22 @@ final class AppState {
         defer { isMutating = false }
 
         do {
-            let output = try await permissionInspector.resetTCCPermission(service: service, bundleID: app.bundleID)
+            let output = try await permissionInspector.resetTCCPermission(
+                service: service,
+                bundleID: app.bundleID,
+                language: language
+            )
             statusBanner = StatusBanner(
-                title: "\(app.name) gizlilik izni sıfırlandı",
+                title: strings.tccResetSuccessTitle(app.name),
                 detail: output,
                 isError: false
             )
             await loadDetail(for: app)
         } catch {
+            let detail = (error as? TCCResetError)?.message(in: language) ?? error.localizedDescription
             statusBanner = StatusBanner(
-                title: "Gizlilik izni sıfırlanamadı",
-                detail: error.localizedDescription,
+                title: strings.tccResetFailedTitle,
+                detail: detail,
                 isError: true
             )
         }

@@ -5,6 +5,8 @@ struct AppDetailView: View {
     @Bindable var state: AppState
     let app: InstalledApp
 
+    private var s: AppStrings { state.strings }
+
     private var resettableCount: Int {
         state.resettableSelectedAppAssociations.count
     }
@@ -18,10 +20,10 @@ struct AppDetailView: View {
 
             Divider()
 
-            Picker("Görünüm", selection: $state.selectedAppTab) {
-                Text("Varsayılan Uzantılar (\(state.selectedAppAssociations.count))")
+            Picker("", selection: $state.selectedAppTab) {
+                Text(s.tabAssociationsTitle(state.selectedAppAssociations.count))
                     .tag(AppDetailTab.associations)
-                Text("İzinler & Güvenlik")
+                Text(s.tabPermissionsTitle)
                     .tag(AppDetailTab.permissions)
             }
             .pickerStyle(.segmented)
@@ -33,7 +35,7 @@ struct AppDetailView: View {
 
             Group {
                 if state.isLoadingAppDetail && state.selectedAppReport == nil {
-                    ProgressView("\(app.name) inceleniyor...")
+                    ProgressView(s.analyzingApp(app.name))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     switch state.selectedAppTab {
@@ -58,19 +60,19 @@ struct AppDetailView: View {
                         .font(.title2.weight(.bold))
 
                     if !app.isInstalled {
-                        PillBadge(text: "Kurulu Değil", color: .orange, icon: "exclamationmark.triangle")
+                        PillBadge(text: s.notInstalledBadge, color: .orange, icon: "exclamationmark.triangle")
                     }
                     if app.isAppleApp {
-                        PillBadge(text: "Apple Uygulaması", color: .blue, icon: "apple.logo")
+                        PillBadge(text: s.appleAppBadge, color: .blue, icon: "apple.logo")
                     }
                     if app.isInstalled, let report = state.selectedAppReport {
                         PillBadge(
-                            text: report.codeSigning.isSandboxed ? "Sandbox" : "Sandbox Dışı",
+                            text: report.codeSigning.isSandboxed ? s.sandboxBadge : s.nonSandboxBadge,
                             color: report.codeSigning.isSandboxed ? .green : .orange,
                             icon: report.codeSigning.isSandboxed ? "lock.shield" : "lock.open"
                         )
                         if report.codeSigning.isHardenedRuntime {
-                            PillBadge(text: "Hardened Runtime", color: .indigo)
+                            PillBadge(text: s.hardenedRuntimeBadge, color: .indigo)
                         }
                     }
                 }
@@ -84,12 +86,12 @@ struct AppDetailView: View {
                     Text("•")
                         .foregroundStyle(.tertiary)
 
-                    Text("Sürüm \(app.version) (\(app.buildNumber))")
+                    Text(s.versionBuild(app.version, app.buildNumber))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                Text(app.isInstalled ? app.url.path : "Sistemde kurulu değil (yalnızca LaunchServices kaydı)")
+                Text(app.isInstalled ? app.url.path : s.uninstalledPathHint)
                     .font(.caption2)
                     .foregroundStyle(app.isInstalled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.orange))
                     .lineLimit(1)
@@ -103,7 +105,7 @@ struct AppDetailView: View {
                     state.promptResetForSelectedApp()
                 } label: {
                     Label(
-                        "Bu Uygulamanın Varsayılanlarını Sıfırla (\(resettableCount))",
+                        s.resetAppDefaultsButton(resettableCount),
                         systemImage: "arrow.counterclockwise"
                     )
                 }
@@ -115,7 +117,7 @@ struct AppDetailView: View {
                     Button {
                         state.revealAppInFinder(app)
                     } label: {
-                        Label("Finder'da Göster", systemImage: "folder")
+                        Label(s.revealInFinder, systemImage: "folder")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
